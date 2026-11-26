@@ -136,3 +136,20 @@ test('placing an order rejects quantities that are not positive integers', async
 
   await api.post('/api/orders').send({ items: [{ id, qty: 2 }] }).expect(201);
 });
+
+test('a new order is completed even when the client supplies a status', async (t) => {
+  const { api } = await isolatedApp(t);
+  const { id } = (await listProducts(api)).find(({ sellable }) => sellable >= 2);
+
+  for (const status of ['pending', 'cancelled']) {
+    await t.test('client status ' + status, async () => {
+      const { body: order } = await api.post('/api/orders')
+        .send({ items: [{ id, qty: 1 }], status })
+        .expect(201);
+      assert.equal(order.status, 'completed');
+
+      const { body: saved } = await api.get('/api/orders/' + order.id).expect(200);
+      assert.equal(saved.status, 'completed');
+    });
+  }
+});

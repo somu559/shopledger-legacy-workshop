@@ -99,7 +99,6 @@ router.post('/orders', function (req, res) {
     customer: customerName,
     customerId: customerId,
     paymentMode: paymentMode,
-    status: body.status || 'completed',
     items: items,
     coupon: rawCoupon,
     subtotal: totals.subtotal,

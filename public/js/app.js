@@ -513,7 +513,6 @@ document.getElementById('place').onclick = function () {
     customerId: selectedCustId ? Number(selectedCustId) : null,
     customer: document.getElementById('customer').value,
     paymentMode: document.getElementById('payment-mode').value,
-    status: document.getElementById('order-status').value,
     coupon: document.getElementById('coupon').value
   };
 
