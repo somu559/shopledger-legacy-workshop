@@ -1,0 +1,125 @@
+const assert = require('node:assert/strict');
+const { copyFile, cp, mkdir, mkdtemp, readFile, rm, symlink } = require('node:fs/promises');
+const { tmpdir } = require('node:os');
+const path = require('node:path');
+const { test } = require('node:test');
+const request = require('supertest');
+const pricing = require('../lib/pricing');
+
+const project = path.resolve(__dirname, '..');
+const sourceDatabase = path.join(project, 'data', 'db.json');
+
+async function isolatedApp(t) {
+  // The store resolves its database relative to its own file.
+  const sandbox = await mkdtemp(path.join(tmpdir(), 'shopledger-test-'));
+  t.after(() => rm(sandbox, { recursive: true, force: true }));
+  const dataDir = path.join(sandbox, 'data');
+  await mkdir(dataDir);
+  const database = path.join(dataDir, 'db.json');
+  await Promise.all([
+    copyFile(sourceDatabase, database),
+    copyFile(path.join(project, 'server.js'), path.join(sandbox, 'server.js')),
+    copyFile(path.join(project, 'config.js'), path.join(sandbox, 'config.js')),
+    cp(path.join(project, 'lib'), path.join(sandbox, 'lib'), { recursive: true }),
+    cp(path.join(project, 'routes'), path.join(sandbox, 'routes'), { recursive: true }),
+    symlink(path.join(project, 'node_modules'), path.join(sandbox, 'node_modules'), 'junction')
+  ]);
+  return {
+    api: request(require(path.join(sandbox, 'server.js'))),
+    db: JSON.parse(await readFile(database, 'utf8'))
+  };
+}
+
+async function listProducts(api) {
+  const { body } = await api.get('/api/products').expect(200);
+  return body;
+}
+
+test('buying exactly the sellable stock succeeds and leaves zero sellable units', async (t) => {
+  const { api } = await isolatedApp(t);
+  const product = (await listProducts(api)).find(({ sellable, reserved }) => sellable > 0 && reserved > 0);
+  assert.ok(product, 'fixture must include a product with sellable and reserved stock');
+
+  const { body: order } = await api.post('/api/orders')
+    .send({ items: [{ id: product.id, qty: product.sellable }] })
+    .expect(201);
+  assert.equal(order.items[0].qty, product.sellable);
+
+  const remaining = (await listProducts(api)).find(({ id }) => id === product.id);
+  assert.equal(remaining.sellable, 0);
+  assert.equal(remaining.stock, product.reserved);
+  assert.equal(remaining.reserved, product.reserved);
+});
+
+test('cancelling an order restores the stock deducted when it was placed', async (t) => {
+  const { api } = await isolatedApp(t);
+  const qty = 2;
+  const product = (await listProducts(api)).find(({ sellable }) => sellable > qty);
+  assert.ok(product, 'fixture must include enough stock for a partial purchase');
+
+  const { body: order } = await api.post('/api/orders')
+    .send({ items: [{ id: product.id, qty }] })
+    .expect(201);
+  const afterPurchase = (await listProducts(api)).find(({ id }) => id === product.id);
+  assert.equal(afterPurchase.stock, product.stock - qty);
+
+  const { body: cancelled } = await api.post('/api/orders/' + order.id + '/cancel').expect(200);
+  assert.equal(cancelled.status, 'cancelled');
+  const restored = (await listProducts(api)).find(({ id }) => id === product.id);
+  assert.deepEqual(
+    { stock: restored.stock, sellable: restored.sellable, reserved: restored.reserved },
+    { stock: product.stock, sellable: product.sellable, reserved: product.reserved }
+  );
+});
+
+test('a string khata settlement increases total settled and decreases balance numerically', async (t) => {
+  const { api } = await isolatedApp(t);
+  const amount = 100.25;
+  const { body: before } = await api.get('/api/customers').expect(200);
+  const customer = before.customers.find(({ totalSettled, balance }) => totalSettled > 0 && balance > amount);
+  assert.ok(customer, 'fixture must include a customer with prior settlements and an outstanding balance');
+
+  const { body: result } = await api.post('/api/customers/' + customer.id + '/settle')
+    .send({ amount: String(amount) })
+    .expect(201);
+  assert.equal(result.settlement.amount, amount);
+
+  const { body: after } = await api.get('/api/customers').expect(200);
+  const updated = after.customers.find(({ id }) => id === customer.id);
+  assert.deepEqual(
+    { totalSettled: updated.totalSettled, balance: updated.balance },
+    { totalSettled: pricing.round2(customer.totalSettled + amount), balance: pricing.round2(customer.balance - amount) }
+  );
+});
+
+test('order date filtering includes both endpoints across months and returns newest first', async (t) => {
+  const { api } = await isolatedApp(t);
+  const { body } = await api.get('/api/orders')
+    .query({ from: '2022-01-14', to: '2022-02-18' })
+    .expect(200);
+
+  assert.deepEqual(body.map(({ id }) => id), [1006, 1005, 1004, 1003]);
+});
+
+test('printed invoice totals match pricing.computeTotals for every stored order', async (t) => {
+  const { api, db } = await isolatedApp(t);
+  assert.ok(db.orders.length > 0, 'fixture must include orders to invoice');
+
+  for (const order of db.orders) {
+    await t.test('order #' + order.id, async () => {
+      const expected = pricing.computeTotals(order.items, order.coupon);
+      const { text } = await api.get('/orders/' + order.id + '/invoice')
+        .expect(200)
+        .expect('Content-Type', /html/);
+      const subtotal = text.match(/>Gross Subtotal<\/td><td[^>]*>₹([\d.]+)</);
+      const tax = text.match(/>CGST \+ SGST \(Total GST\)<\/td><td[^>]*>₹([\d.]+)</);
+      const discount = text.match(/>Coupon Discount \([^<]*\)<\/td><td[^>]*>-₹([\d.]+)</);
+      const total = text.match(/>Invoice Total<\/td><td[^>]*>₹([\d.]+)</);
+
+      assert.deepEqual(
+        { subtotal: Number(subtotal?.[1]), discount: Number(discount?.[1] ?? 0), tax: Number(tax?.[1]), total: Number(total?.[1]) },
+        { subtotal: expected.subtotal, discount: expected.discount, tax: expected.tax, total: expected.total }
+      );
+    });
+  }
+});
