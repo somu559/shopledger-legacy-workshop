@@ -59,7 +59,8 @@ router.post('/pricing/preview', function (req, res) {
 });
 
 router.get('/admin/export', function (req, res) {
-  if (req.query.key != config.adminKey) return res.sendStatus(403);
+  var adminKey = process.env.ADMIN_KEY;
+  if (!adminKey || req.query.key !== adminKey) return res.sendStatus(403);
   res.json(store.read());
 });
 

@@ -205,3 +205,23 @@ test('khata settlement rejects non-numeric amounts and payments above the balanc
   assert.equal(paid.settlement.amount, customer.balance);
   assert.equal(paid.customer.balance, 0);
 });
+
+test('admin export requires a configured ADMIN_KEY and an exact matching query key', async (t) => {
+  const previousKey = process.env.ADMIN_KEY;
+  t.after(() => {
+    if (previousKey === undefined) delete process.env.ADMIN_KEY;
+    else process.env.ADMIN_KEY = previousKey;
+  });
+
+  delete process.env.ADMIN_KEY;
+  const { api, db } = await isolatedApp(t);
+  await api.get('/api/admin/export').expect(403);
+
+  process.env.ADMIN_KEY = '';
+  await api.get('/api/admin/export').query({ key: '' }).expect(403);
+
+  process.env.ADMIN_KEY = 'test-export-key';
+  await api.get('/api/admin/export').query({ key: 'wrong' }).expect(403);
+  const { body } = await api.get('/api/admin/export').query({ key: process.env.ADMIN_KEY }).expect(200);
+  assert.deepEqual(body, db);
+});
