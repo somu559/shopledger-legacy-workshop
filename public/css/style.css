@@ -556,6 +556,7 @@ input::placeholder { color: var(--muted); opacity: 1; }
 
 
 .app-sidebar {
+  --focus: #b3c7ff;
   overflow-y: auto;
   position: fixed;
   inset: 0 auto 0 0;
