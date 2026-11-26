@@ -7,28 +7,44 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <div class="brand-logo"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-4 2-4-2-3 2zM8 8h8m-8 4h8m-8 4h4"/></svg></div>
-        <div>
-          <div class="brand-title">
-            ShopLedger
-          </div>
-          <div class="brand-sub" id="shop-subtitle">Corner Shop Kirana &amp; Wholesale &middot; Sadashiv Peth, Pune</div>
-        </div>
-      </div>
-      <div class="topbar-meta">
-        <span class="meta-chip" id="shop-gstin">GSTIN: 27AAAAA0000A1Z5</span>
-      </div>
+  <aside class="app-sidebar" aria-label="Workspace navigation">
+    <a class="sidebar-brand" href="#new" aria-label="ShopLedger checkout">
+      <div class="brand-logo"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-3-2-4 2-4-2-3 2zM8 8h8m-8 4h8m-8 4h4"/></svg></div>
+
+      <span>ShopLedger</span>
+    </a>
+    <div class="workspace-card">
+      <span class="workspace-monogram" aria-hidden="true">CS</span>
+      <div><strong>Corner Shop</strong><span>Kirana &amp; wholesale</span></div>
     </div>
-  </header>
+    <div class="sidebar-section-label">Workspace</div>
+    <nav class="tabs-bar" id="tabs" aria-label="ShopLedger sections">
+      <a href="#new" id="tab-new" class="tab-link active" aria-current="page"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2 11h11l3-8H6m2 12h.01M17 19h.01"/><circle cx="8" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></svg> <span>Checkout</span></a>
+      <a href="#orders" id="tab-orders" class="tab-link"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 1 2.6 6.4M3 7v5h5m4-5v5l3 2"/></svg> <span>Orders</span> <span class="tab-badge" id="badge-orders">0</span></a>
+      <a href="#khata" id="tab-khata" class="tab-link"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h14v18H6a2 2 0 0 1 0-4h14M8 7h8m-8 4h6"/></svg> <span>Customer khata</span></a>
+      <a href="#audit" id="tab-audit" class="tab-link"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 5V3h6v2m-6 9 2 2 4-4"/></svg> <span>Stock &amp; GST audit</span> <span class="tab-badge warn" id="badge-audit">–</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="store-mark" aria-hidden="true">CS</span>
+      <div><strong>Corner Shop</strong><span>Sadashiv Peth, Pune</span></div>
+    </div>
+  </aside>
+  <div class="app-content">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <span class="header-context">Workspace</span><span class="breadcrumb-divider" aria-hidden="true">/</span>
+          <span id="page-context">Checkout</span>
+        </div>
+        <span class="meta-chip" id="shop-gstin">GSTIN 27AAAAA0000A1Z5</span>
+      </div>
+    </header>
 
   <main class="container">
     <div class="overview-heading">
       <div>
-        <h1>Counter overview</h1>
-        <p>Sales, inventory and khata at a glance</p>
+        <h1 id="page-heading">Point of sale</h1>
+        <p id="shop-subtitle">Corner Shop Kirana &amp; Wholesale · Sadashiv Peth, Pune</p>
       </div>
       <div class="overview-orders">
         <strong id="kpi-orders">0 orders</strong>
@@ -57,18 +73,13 @@
         <div class="kpi-foot" id="kpi-stock-sub">0 out of stock</div>
       </article>
       <button type="button" class="kpi-card kpi-button alert-chip" id="recon-alert-btn" title="Open GST reconciliation">
-        <span class="kpi-label"><span class="kpi-icon"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 5V3h6v2m-6 9 2 2 4-4"/></svg></span>Reconciliation mismatches</span>
+        <span class="kpi-label"><span class="kpi-icon"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 5V3h6v2m-6 9 2 2 4-4"/></svg></span>Invoice mismatches</span>
         <span class="kpi-value" id="kpi-recon">–</span>
         <span class="kpi-foot"><span class="dot" aria-hidden="true"></span><span id="recon-alert-text">Checking invoices</span></span>
       </button>
     </section>
 
-    <nav class="tabs-bar" id="tabs" aria-label="ShopLedger sections">
-      <a href="#new" id="tab-new" class="tab-link active" aria-current="page"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2 11h11l3-8H6m2 12h.01M17 19h.01"/><circle cx="8" cy="19" r="1"/><circle cx="17" cy="19" r="1"/></svg> <span>Checkout</span></a>
-      <a href="#orders" id="tab-orders" class="tab-link"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 1 2.6 6.4M3 7v5h5m4-5v5l3 2"/></svg> <span>Orders</span> <span class="tab-badge" id="badge-orders">0</span></a>
-      <a href="#khata" id="tab-khata" class="tab-link"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h14v18H6a2 2 0 0 1 0-4h14M8 7h8m-8 4h6"/></svg> <span>Customer khata</span></a>
-      <a href="#audit" id="tab-audit" class="tab-link"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 5V3h6v2m-6 9 2 2 4-4"/></svg> <span>Stock &amp; GST audit</span> <span class="tab-badge warn" id="badge-audit">–</span></a>
-    </nav>
+
 
     <!-- TAB 1: NEW ORDER (POS) -->
     <section id="view-new" class="tab-view">
@@ -78,8 +89,10 @@
           <div class="panel-header">
             <div>
               <h2 class="panel-title" id="catalog-heading">Product catalog</h2>
-              <p class="panel-desc">Choose a quantity to add an item to the bill</p>
+              <p class="panel-desc">Browse products and build your next bill</p>
             </div>
+          </div>
+
             <div class="catalog-tools">
               <label class="search-box" for="pos-search">
                 <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="5.5"/><path d="m15 15 4 4"/></svg>
@@ -87,7 +100,6 @@
               </label>
               <a class="btn-link mobile-bill-link" href="#bill">View bill</a>
             </div>
-          </div>
 
           <div class="category-pills" id="pos-categories">
             <button type="button" class="cat-pill active" data-cat="all" aria-pressed="true">All items</button>
@@ -393,6 +405,7 @@
       </div>
     </section>
   </main>
+  </div>
 
   <div class="toast-region" aria-label="Notifications">
     <div id="msg"></div>

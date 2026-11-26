@@ -516,6 +516,9 @@ function loadGstReconciliation() {
 }
 
 function showTab(which) {
+  var headings = { new: 'Point of sale', orders: 'Order history', khata: 'Customer khata', audit: 'Inventory & GST audit' };
+  document.getElementById('page-heading').textContent = headings[which];
+  document.getElementById('page-context').textContent = which === 'new' ? 'Checkout' : headings[which];
   var tabs = ['new', 'orders', 'khata', 'audit'];
   for (var i = 0; i < tabs.length; i++) {
     var t = tabs[i];
@@ -680,6 +683,11 @@ document.getElementById('btn-record-settlement').onclick = function () {
       showToast('khata-msg', 'err', 'Could not record payment', (res && res.error) || 'Try again.', button);
     }
   });
+};
+
+document.querySelector('.sidebar-brand').onclick = function () {
+  showTab('new');
+  return false;
 };
 
 // Initial boot
