@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { copyFile, cp, mkdir, mkdtemp, readFile, rm, symlink } = require('node:fs/promises');
+const { copyFile, cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } = require('node:fs/promises');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
@@ -9,7 +9,7 @@ const pricing = require('../lib/pricing');
 const project = path.resolve(__dirname, '..');
 const sourceDatabase = path.join(project, 'data', 'db.json');
 
-async function isolatedApp(t) {
+async function isolatedApp(t, prepareDatabase) {
   // The store resolves its database relative to its own file.
   const sandbox = await mkdtemp(path.join(tmpdir(), 'shopledger-test-'));
   t.after(() => rm(sandbox, { recursive: true, force: true }));
@@ -24,10 +24,12 @@ async function isolatedApp(t) {
     cp(path.join(project, 'routes'), path.join(sandbox, 'routes'), { recursive: true }),
     symlink(path.join(project, 'node_modules'), path.join(sandbox, 'node_modules'), 'junction')
   ]);
-  return {
-    api: request(require(path.join(sandbox, 'server.js'))),
-    db: JSON.parse(await readFile(database, 'utf8'))
-  };
+  const db = JSON.parse(await readFile(database, 'utf8'));
+  if (prepareDatabase) {
+    prepareDatabase(db);
+    await writeFile(database, JSON.stringify(db));
+  }
+  return { api: request(require(path.join(sandbox, 'server.js'))), db };
 }
 
 async function listProducts(api) {
@@ -152,4 +154,34 @@ test('a new order is completed even when the client supplies a status', async (t
       assert.equal(saved.status, 'completed');
     });
   }
+});
+
+test('khata billing enforces the displayed default credit limit of 5000', async (t) => {
+  const customerId = 1;
+  const productId = 1;
+  const { api } = await isolatedApp(t, (db) => {
+    const product = db.products.find(({ id }) => id === productId);
+    const customer = db.customers.find(({ id }) => id === customerId);
+    const oneUnit = pricing.computeTotals([{ ...product, qty: 1 }]).total;
+    delete customer.creditLimit;
+    customer.openingBalance = pricing.round2(5000 - oneUnit);
+    customer.totalBilled = 0;
+    customer.totalSettled = 0;
+  });
+
+  const { body: before } = await api.get('/api/customers').expect(200);
+  const customer = before.customers.find(({ id }) => id === customerId);
+  assert.equal(customer.creditLimit, 5000);
+
+  const order = { customerId, paymentMode: 'khata' };
+  const { body: rejected } = await api.post('/api/orders')
+    .send({ ...order, items: [{ id: productId, qty: 2 }] })
+    .expect(409);
+  assert.match(rejected.error, /credit limit exceeded/);
+
+  await api.post('/api/orders')
+    .send({ ...order, items: [{ id: productId, qty: 1 }] })
+    .expect(201);
+  const { body: after } = await api.get('/api/customers').expect(200);
+  assert.equal(after.customers.find(({ id }) => id === customerId).balance, 5000);
 });
