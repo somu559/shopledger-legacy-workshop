@@ -123,3 +123,16 @@ test('printed invoice totals match pricing.computeTotals for every stored order'
     });
   }
 });
+
+test('placing an order rejects quantities that are not positive integers', async (t) => {
+  const { api } = await isolatedApp(t);
+  const { id } = (await listProducts(api)).find(({ sellable }) => sellable >= 2);
+
+  for (const qty of [undefined, null, 0, -1, 1.5, '2', '2 units', true]) {
+    await t.test('quantity ' + JSON.stringify(qty), async () => {
+      await api.post('/api/orders').send({ items: [{ id, qty }] }).expect(400);
+    });
+  }
+
+  await api.post('/api/orders').send({ items: [{ id, qty: 2 }] }).expect(201);
+});
