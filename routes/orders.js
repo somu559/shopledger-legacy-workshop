@@ -36,12 +36,15 @@ router.post('/orders', function (req, res) {
   }
 
   for (var i = 0; i < body.items.length; i++) {
-    var p = inventory.find(db.products, body.items[i].id);
-    if (!p) {
-      return res.status(400).json({ error: 'Unknown product ID ' + body.items[i].id });
+    var item = body.items[i];
+    var q = item && item.qty;
+    if (!Number.isInteger(q) || q <= 0) {
+      return res.status(400).json({ error: 'Order quantity must be a positive integer' });
     }
-    var q = parseInt(body.items[i].qty, 10);
-    if (!q || q < 1) q = 1;
+    var p = inventory.find(db.products, item.id);
+    if (!p) {
+      return res.status(400).json({ error: 'Unknown product ID ' + item.id });
+    }
 
     // Note: hsn is stored on line items; tax slab is resolved via lib/tax.js
     items.push({
@@ -96,7 +99,6 @@ router.post('/orders', function (req, res) {
     customer: customerName,
     customerId: customerId,
     paymentMode: paymentMode,
-    status: body.status || 'completed',
     items: items,
     coupon: rawCoupon,
     subtotal: totals.subtotal,
