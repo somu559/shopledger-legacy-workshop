@@ -32,6 +32,15 @@ function post(url, data, cb) {
   x.send(JSON.stringify(data));
 }
 
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function fmtMoney(n) {
   var val = Number(n || 0);
   return '₹' + val.toFixed(2);
@@ -96,25 +105,26 @@ function renderCatalogTable() {
     if (sellable <= 0) {
       stockBadge = '<span class="stock-pill out">Out of Stock (0)</span>';
     } else if (sellable <= 2) {
-      stockBadge = '<span class="stock-pill low">' + sellable + ' Left (Low)</span>';
+      stockBadge = '<span class="stock-pill low">' + escapeHtml(sellable) + ' Left (Low)</span>';
     } else {
-      stockBadge = '<span class="stock-pill in">' + sellable + ' Available</span>';
+      stockBadge = '<span class="stock-pill in">' + escapeHtml(sellable) + ' Available</span>';
     }
 
-    var reservedNote = p.reserved ? '<div class="prod-cat">Physical: ' + p.stock + ' · Reserved: ' + p.reserved + '</div>' : '';
-    var curQty = cartQuantities[p.id] || 0;
+    var reservedNote = p.reserved ? '<div class="prod-cat">Physical: ' + escapeHtml(p.stock) + ' · Reserved: ' + escapeHtml(p.reserved) + '</div>' : '';
+    var productId = escapeHtml(p.id);
+    var curQty = escapeHtml(cartQuantities[p.id] || 0);
 
     html += '<tr>' +
-      '<td><div><span class="sku-code">' + p.sku + '</span><span class="prod-name">' + p.name + '</span></div>' +
-      '<div class="prod-cat">' + p.category + ' · per ' + (p.unit || 'unit') + '</div></td>' +
-      '<td><span class="hsn-badge">HSN ' + p.hsn + '</span><span class="gst-badge">' + p.gstPercent + '% GST</span></td>' +
+      '<td><div><span class="sku-code">' + escapeHtml(p.sku) + '</span><span class="prod-name">' + escapeHtml(p.name) + '</span></div>' +
+      '<div class="prod-cat">' + escapeHtml(p.category) + ' · per ' + escapeHtml(p.unit || 'unit') + '</div></td>' +
+      '<td><span class="hsn-badge">HSN ' + escapeHtml(p.hsn) + '</span><span class="gst-badge">' + escapeHtml(p.gstPercent) + '% GST</span></td>' +
       '<td class="r"><strong>' + fmtMoney(p.price) + '</strong></td>' +
       '<td class="r">' + stockBadge + reservedNote + '</td>' +
       '<td class="c">' +
       '<div class="qty-stepper">' +
-      '<button type="button" class="qty-btn" onclick="stepQty(' + p.id + ', -1)">-</button>' +
-      '<input type="number" min="0" value="' + curQty + '" id="qty-' + p.id + '" onchange="onQtyInput(' + p.id + ', this.value)">' +
-      '<button type="button" class="qty-btn" onclick="stepQty(' + p.id + ', 1)">+</button>' +
+      '<button type="button" class="qty-btn" data-product-id="' + productId + '" data-qty-step="-1">-</button>' +
+      '<input type="number" min="0" value="' + curQty + '" id="qty-' + productId + '" data-product-id="' + productId + '">' +
+      '<button type="button" class="qty-btn" data-product-id="' + productId + '" data-qty-step="1">+</button>' +
       '</div>' +
       '</td>' +
       '</tr>';
@@ -127,21 +137,21 @@ function renderCatalogTable() {
   document.querySelector('#products tbody').innerHTML = html;
 }
 
-window.stepQty = function (productId, delta) {
+function stepQty(productId, delta) {
   var current = parseInt(cartQuantities[productId] || 0, 10);
   var next = Math.max(0, current + delta);
   cartQuantities[productId] = next;
   var input = document.getElementById('qty-' + productId);
   if (input) input.value = next;
   updateCartPreview();
-};
+}
 
-window.onQtyInput = function (productId, rawVal) {
+function onQtyInput(productId, rawVal) {
   var val = parseInt(rawVal, 10);
   if (isNaN(val) || val < 0) val = 0;
   cartQuantities[productId] = val;
   updateCartPreview();
-};
+}
 
 function getSelectedCartItems() {
   var items = [];
@@ -175,7 +185,7 @@ function updateCartPreview() {
 
   if (!items.length) {
     listEl.className = 'cart-items-empty';
-    listEl.innerHTML = 'No items selected yet. Adjust quantities in the catalog table.';
+    listEl.textContent = 'No items selected yet. Adjust quantities in the catalog table.';
     document.getElementById('preview-subtotal').textContent = '₹0.00';
     document.getElementById('preview-discount').textContent = '-₹0.00';
     document.getElementById('preview-tax').textContent = '₹0.00';
@@ -188,7 +198,7 @@ function updateCartPreview() {
   for (var j = 0; j < items.length; j++) {
     var it = items[j];
     miniHtml += '<div class="cart-mini-item">' +
-      '<span>' + it.name + ' &times; ' + it.qty + '</span>' +
+      '<span>' + escapeHtml(it.name) + ' &times; ' + escapeHtml(it.qty) + '</span>' +
       '<strong>' + fmtMoney(it.price * it.qty) + '</strong>' +
       '</div>';
   }
@@ -239,8 +249,8 @@ function loadCustomersDropdown() {
 
     for (var i = 0; i < customersList.length; i++) {
       var c = customersList[i];
-      posOpts += '<option value="' + c.id + '">' + c.name + ' (' + c.type + ' · Due: ' + fmtMoney(c.balance) + ')</option>';
-      settleOpts += '<option value="' + c.id + '">' + c.name + ' (Due: ' + fmtMoney(c.balance) + ')</option>';
+      posOpts += '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.name) + ' (' + escapeHtml(c.type) + ' · Due: ' + fmtMoney(c.balance) + ')</option>';
+      settleOpts += '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.name) + ' (Due: ' + fmtMoney(c.balance) + ')</option>';
     }
 
     posSelect.innerHTML = posOpts;
@@ -272,23 +282,23 @@ function loadOrders() {
 
       var st = o.status || 'completed';
       var cancelBtn = st !== 'cancelled'
-        ? ' <button type="button" class="btn btn-danger-outline" onclick="cancelOrder(' + o.id + ')">Cancel</button>'
+        ? ' <button type="button" class="btn btn-danger-outline" data-cancel-order="' + escapeHtml(o.id) + '">Cancel</button>'
         : '';
 
       html += '<tr>' +
-        '<td><strong>#' + o.id + '</strong></td>' +
-        '<td>' + o.date + '</td>' +
-        '<td><strong>' + (o.customer || 'Walk-in') + '</strong></td>' +
-        '<td style="max-width:260px;font-size:12px;color:#475569">' + itemSummary + '</td>' +
-        '<td><span class="sku-code">' + (o.paymentMode || 'cash').toUpperCase() + '</span></td>' +
-        '<td>' + (o.coupon ? '<span class="gst-badge">' + o.coupon + '</span>' : '<span style="color:#94a3b8">-</span>') + '</td>' +
+        '<td><strong>#' + escapeHtml(o.id) + '</strong></td>' +
+        '<td>' + escapeHtml(o.date) + '</td>' +
+        '<td><strong>' + escapeHtml(o.customer || 'Walk-in') + '</strong></td>' +
+        '<td style="max-width:260px;font-size:12px;color:#475569">' + escapeHtml(itemSummary) + '</td>' +
+        '<td><span class="sku-code">' + escapeHtml(String(o.paymentMode || 'cash').toUpperCase()) + '</span></td>' +
+        '<td>' + (o.coupon ? '<span class="gst-badge">' + escapeHtml(o.coupon) + '</span>' : '<span style="color:#94a3b8">-</span>') + '</td>' +
         '<td class="r">' + fmtMoney(o.subtotal) + '</td>' +
         '<td class="r" style="color:#15803d">' + (o.discount ? '-' + fmtMoney(o.discount) : '₹0.00') + '</td>' +
         '<td class="r">' + fmtMoney(o.tax) + '</td>' +
         '<td class="r"><strong>' + fmtMoney(o.total) + '</strong></td>' +
-        '<td><span class="status-pill ' + st + '">' + st + '</span></td>' +
+        '<td><span class="status-pill ' + escapeHtml(st) + '">' + escapeHtml(st) + '</span></td>' +
         '<td class="r" style="white-space:nowrap">' +
-        '<a class="btn-link" href="/orders/' + o.id + '/invoice" target="_blank">Invoice &nearr;</a>' +
+        '<a class="btn-link" href="/orders/' + escapeHtml(encodeURIComponent(o.id)) + '/invoice" target="_blank">Invoice &nearr;</a>' +
         cancelBtn +
         '</td>' +
         '</tr>';
@@ -302,9 +312,9 @@ function loadOrders() {
   });
 }
 
-window.cancelOrder = function (orderId) {
+function cancelOrder(orderId) {
   var msgEl = document.getElementById('orders-action-msg');
-  post('/api/orders/' + orderId + '/cancel', { reason: 'Cancelled from Order Register' }, function (status, res) {
+  post('/api/orders/' + encodeURIComponent(orderId) + '/cancel', { reason: 'Cancelled from Order Register' }, function (status, res) {
     if (status === 200) {
       msgEl.className = 'ok';
       msgEl.textContent = 'Order #' + orderId + ' has been marked as cancelled and inventory release was triggered.';
@@ -317,7 +327,7 @@ window.cancelOrder = function (orderId) {
       msgEl.textContent = (res && res.error) ? res.error : 'Failed to cancel order';
     }
   });
-};
+}
 
 function renderKhataTable(customers, settlements) {
   var html = '';
@@ -325,15 +335,15 @@ function renderKhataTable(customers, settlements) {
     var c = customers[i];
     var balColor = c.balance > 0 ? '#b91c1c' : '#15803d';
     html += '<tr>' +
-      '<td><strong>' + c.name + '</strong><div class="prod-cat">' + c.phone + '</div></td>' +
-      '<td><span class="sku-code">' + c.type + '</span>' +
-      (c.gstin ? '<div class="prod-cat">' + c.gstin + '</div>' : '') + '</td>' +
+      '<td><strong>' + escapeHtml(c.name) + '</strong><div class="prod-cat">' + escapeHtml(c.phone) + '</div></td>' +
+      '<td><span class="sku-code">' + escapeHtml(c.type) + '</span>' +
+      (c.gstin ? '<div class="prod-cat">' + escapeHtml(c.gstin) + '</div>' : '') + '</td>' +
       '<td class="r">' + fmtMoney(c.creditLimit) + '</td>' +
       '<td class="r">' + fmtMoney(c.openingBalance) + '</td>' +
       '<td class="r">' + fmtMoney(c.totalBilled) + '</td>' +
-      '<td class="r">' + String(c.totalSettled) + '</td>' +
+      '<td class="r">' + escapeHtml(c.totalSettled) + '</td>' +
       '<td class="r"><strong style="color:' + balColor + '">' + fmtMoney(c.balance) + '</strong></td>' +
-      '<td class="r"><button type="button" class="btn btn-ghost btn-sm" onclick="prefillSettlement(' + c.id + ')">Settle</button></td>' +
+      '<td class="r"><button type="button" class="btn btn-ghost btn-sm" data-settle-customer="' + escapeHtml(c.id) + '">Settle</button></td>' +
       '</tr>';
   }
   document.querySelector('#customers-table tbody').innerHTML = html;
@@ -342,17 +352,17 @@ function renderKhataTable(customers, settlements) {
   for (var j = 0; j < settlements.length; j++) {
     var s = settlements[j];
     feedHtml += '<div class="settlement-card">' +
-      '<div class="settlement-card-top"><span>' + s.customerName + '</span><span style="color:#15803d">+' + fmtMoney(s.amount) + '</span></div>' +
-      '<div class="settlement-card-sub">' + s.date + ' · ' + String(s.mode).toUpperCase() + ' · ' + (s.note || '') + '</div>' +
+      '<div class="settlement-card-top"><span>' + escapeHtml(s.customerName) + '</span><span style="color:#15803d">+' + fmtMoney(s.amount) + '</span></div>' +
+      '<div class="settlement-card-sub">' + escapeHtml(s.date) + ' · ' + escapeHtml(String(s.mode).toUpperCase()) + ' · ' + escapeHtml(s.note) + '</div>' +
       '</div>';
   }
   document.getElementById('settlements-list').innerHTML = feedHtml || '<div class="prod-cat">No settlements logged yet.</div>';
 }
 
-window.prefillSettlement = function (customerId) {
+function prefillSettlement(customerId) {
   document.getElementById('settle-customer').value = String(customerId);
   document.getElementById('settle-amount').focus();
-};
+}
 
 function renderInventoryAuditTable() {
   var html = '';
@@ -365,19 +375,19 @@ function renderInventoryAuditTable() {
     } else if (sellable <= 2) {
       health = '<span class="stock-pill low">Critical (1-2 Left)</span>';
     } else if (sellable <= p.reorderLevel) {
-      health = '<span class="stock-pill low">Below Reorder (' + p.reorderLevel + ')</span>';
+      health = '<span class="stock-pill low">Below Reorder (' + escapeHtml(p.reorderLevel) + ')</span>';
     }
 
     html += '<tr>' +
-      '<td><span class="sku-code">' + p.sku + '</span></td>' +
-      '<td><strong>' + p.name + '</strong></td>' +
-      '<td>' + p.category + '</td>' +
-      '<td><span class="hsn-badge">' + p.hsn + '</span></td>' +
-      '<td class="r">' + p.gstPercent + '%</td>' +
+      '<td><span class="sku-code">' + escapeHtml(p.sku) + '</span></td>' +
+      '<td><strong>' + escapeHtml(p.name) + '</strong></td>' +
+      '<td>' + escapeHtml(p.category) + '</td>' +
+      '<td><span class="hsn-badge">' + escapeHtml(p.hsn) + '</span></td>' +
+      '<td class="r">' + escapeHtml(p.gstPercent) + '%</td>' +
       '<td class="r">' + fmtMoney(p.price) + '</td>' +
-      '<td class="r">' + p.stock + '</td>' +
-      '<td class="r">' + (p.reserved || 0) + '</td>' +
-      '<td class="r"><strong>' + sellable + '</strong></td>' +
+      '<td class="r">' + escapeHtml(p.stock) + '</td>' +
+      '<td class="r">' + escapeHtml(p.reserved || 0) + '</td>' +
+      '<td class="r"><strong>' + escapeHtml(sellable) + '</strong></td>' +
       '<td>' + health + '</td>' +
       '</tr>';
   }
@@ -407,10 +417,10 @@ function loadGstReconciliation() {
       var deltaStyle = r.matched ? 'color:#15803d' : 'color:#b91c1c;font-weight:700';
 
       html += '<tr>' +
-        '<td><a class="btn-link" href="/orders/' + r.orderId + '/invoice" target="_blank">#' + r.orderId + ' &nearr;</a></td>' +
-        '<td>' + r.date + '</td>' +
-        '<td>' + r.customer + '</td>' +
-        '<td>' + (r.coupon ? '<span class="gst-badge">' + r.coupon + '</span>' : '-') + '</td>' +
+        '<td><a class="btn-link" href="/orders/' + escapeHtml(encodeURIComponent(r.orderId)) + '/invoice" target="_blank">#' + escapeHtml(r.orderId) + ' &nearr;</a></td>' +
+        '<td>' + escapeHtml(r.date) + '</td>' +
+        '<td>' + escapeHtml(r.customer) + '</td>' +
+        '<td>' + (r.coupon ? '<span class="gst-badge">' + escapeHtml(r.coupon) + '</span>' : '-') + '</td>' +
         '<td class="r">' + fmtMoney(r.ledgerSubtotal) + '</td>' +
         '<td class="r">-' + fmtMoney(r.ledgerDiscount) + '</td>' +
         '<td class="r">' + fmtMoney(r.ledgerTax) + '</td>' +
@@ -442,6 +452,26 @@ function showTab(which) {
 }
 
 // Event bindings
+var productRows = document.querySelector('#products tbody');
+productRows.addEventListener('click', function (event) {
+  var button = event.target.closest('button[data-qty-step]');
+  if (button) stepQty(button.dataset.productId, Number(button.dataset.qtyStep));
+});
+productRows.addEventListener('change', function (event) {
+  var input = event.target;
+  if (input.matches('input[data-product-id]')) onQtyInput(input.dataset.productId, input.value);
+});
+
+document.querySelector('#orders tbody').addEventListener('click', function (event) {
+  var button = event.target.closest('button[data-cancel-order]');
+  if (button) cancelOrder(button.dataset.cancelOrder);
+});
+
+document.querySelector('#customers-table tbody').addEventListener('click', function (event) {
+  var button = event.target.closest('button[data-settle-customer]');
+  if (button) prefillSettlement(button.dataset.settleCustomer);
+});
+
 document.getElementById('tab-new').onclick = function () { showTab('new'); return false; };
 document.getElementById('tab-orders').onclick = function () { showTab('orders'); return false; };
 document.getElementById('tab-khata').onclick = function () { showTab('khata'); return false; };
@@ -493,7 +523,7 @@ document.getElementById('clear-cart').onclick = function () {
   document.getElementById('customer-select').value = '';
   document.getElementById('walkin-name-group').style.display = '';
   document.getElementById('msg').className = '';
-  document.getElementById('msg').innerHTML = '';
+  document.getElementById('msg').textContent = '';
   renderCatalogTable();
   updateCartPreview();
 };
@@ -503,7 +533,7 @@ document.getElementById('place').onclick = function () {
   var msg = document.getElementById('msg');
   if (!items.length) {
     msg.className = 'err';
-    msg.innerHTML = 'Pick at least one item from the catalog';
+    msg.textContent = 'Pick at least one item from the catalog';
     return;
   }
 
@@ -520,15 +550,15 @@ document.getElementById('place').onclick = function () {
     if (status === 201) {
       cartQuantities = {};
       msg.className = 'ok';
-      msg.innerHTML = '<strong>Order #' + res.id + ' placed!</strong> Ledger Total: ' + fmtMoney(res.total) +
-        ' &middot; <a href="/orders/' + res.id + '/invoice" target="_blank">Open GST Invoice &nearr;</a>';
+      msg.innerHTML = '<strong>Order #' + escapeHtml(res.id) + ' placed!</strong> Ledger Total: ' + fmtMoney(res.total) +
+        ' &middot; <a href="/orders/' + escapeHtml(encodeURIComponent(res.id)) + '/invoice" target="_blank">Open GST Invoice &nearr;</a>';
       loadProducts();
       updateCartPreview();
       loadDashboardSummary();
       loadCustomersDropdown();
     } else {
       msg.className = 'err';
-      msg.innerHTML = (res && res.error) ? res.error : 'Order failed';
+      msg.textContent = (res && res.error) ? res.error : 'Order failed';
     }
   });
 };
