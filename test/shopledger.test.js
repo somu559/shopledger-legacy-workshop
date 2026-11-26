@@ -185,3 +185,23 @@ test('khata billing enforces the displayed default credit limit of 5000', async 
   const { body: after } = await api.get('/api/customers').expect(200);
   assert.equal(after.customers.find(({ id }) => id === customerId).balance, 5000);
 });
+
+test('khata settlement rejects non-numeric amounts and payments above the balance', async (t) => {
+  const { api } = await isolatedApp(t);
+  const { body: before } = await api.get('/api/customers').expect(200);
+  const customer = before.customers.find(({ balance }) => balance > 10);
+  const url = '/api/customers/' + customer.id + '/settle';
+
+  for (const amount of ['invalid', 'Infinity', '1 rupee', true, [1], null, 0, -1, pricing.round2(customer.balance + 0.01)]) {
+    await t.test('amount ' + JSON.stringify(amount), async () => {
+      await api.post(url).send({ amount }).expect(400);
+    });
+  }
+
+  const { body: unchanged } = await api.get('/api/customers').expect(200);
+  assert.deepEqual(unchanged, before);
+
+  const { body: paid } = await api.post(url).send({ amount: String(customer.balance) }).expect(201);
+  assert.equal(paid.settlement.amount, customer.balance);
+  assert.equal(paid.customer.balance, 0);
+});
